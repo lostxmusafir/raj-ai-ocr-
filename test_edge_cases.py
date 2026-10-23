@@ -5,6 +5,12 @@ import pytest
 import numpy as np
 import cv2
 import os
+import sys
+
+root_dir = os.path.dirname(os.path.abspath(__file__))
+if root_dir not in sys.path:
+    sys.path.insert(0, root_dir)
+
 from ocr_engine import StencilOCREngine, IMPLEMENT_CATALOG, STATE_CODES
 
 @pytest.fixture(scope="module")
@@ -144,15 +150,18 @@ def test_crop_and_binarize(engine):
     assert np.all(np.isin(thresh, [0, 255]))
 
 def test_real_dataset_images(engine):
-    samples = {
-        "WhatsApp Image 2026-10-22 at 4.55.31 PM.jpeg": "GJ/142/446/2026/11881/UP",
-        "WhatsApp Image 2026-10-22 at 4.55.31 PM (1).jpeg": "GJ/142/3674/2026/10652",
-        "WhatsApp Image 2026-10-22 at 4.55.32 PM.jpeg": "GJ/142/3674/2026/10568",
-        "WhatsApp Image 2026-10-22 at 4.55.32 PM (1).jpeg": "GJ/142/445/2026/43889",
-    }
-    for filepath, expected in samples.items():
-        if os.path.exists(filepath):
-            res = engine.process_image(filepath)
-            assert res["final_code"] == expected, f"Failed on {filepath}: got {res['final_code']}, expected {expected}"
+    samples = [
+        ("sample1_beam_upsidedown.jpg", "WhatsApp Image 2026-10-22 at 4.55.31 PM.jpeg", "GJ/142/446/2026/11881/UP"),
+        ("sample2_bracket_2line.jpg", "WhatsApp Image 2026-10-22 at 4.55.31 PM (1).jpeg", "GJ/142/3674/2026/10652"),
+        ("sample3_plate_2line.jpg", "WhatsApp Image 2026-10-22 at 4.55.32 PM.jpeg", "GJ/142/3674/2026/10568"),
+        ("sample4_tube_vertical.jpg", "WhatsApp Image 2026-10-22 at 4.55.32 PM (1).jpeg", "GJ/142/445/2026/43889"),
+    ]
+    for clean_name, legacy_name, expected in samples:
+        path = os.path.join(root_dir, "samples", clean_name)
+        if not os.path.exists(path):
+            path = os.path.join(root_dir, legacy_name)
+        if os.path.exists(path):
+            res = engine.process_image(path)
+            assert res["final_code"] == expected, f"Failed on {path}: got {res['final_code']}, expected {expected}"
             assert res["cropped_binary"] is not None
             assert res["digital_stamp"] is not None

@@ -15,14 +15,14 @@ if errorlevel 1 (
 )
 
 echo Authenticating and pushing to main branch...
-git push -u origin main
+git -c credential.helper= push -u origin main
 echo.
 echo ============================================================
 if %errorlevel% equ 0 (
     echo [SUCCESS] Successfully pushed all commits to GitHub!
 ) else (
-    echo [NOTE] GitHub authentication required.
-    echo Please sign in via the browser popup or enter your GitHub Personal Access Token (PAT).
+    echo [NOTE] GitHub authentication failed.
+    echo If credentials expired, please update token in remote URL.
 )
 echo ============================================================
 pause

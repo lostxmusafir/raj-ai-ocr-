@@ -17,6 +17,23 @@ if root_dir not in sys.path:
 from server import app
 from ocr_engine import StencilOCREngine, IMPLEMENT_CATALOG, STATE_CODES
 
+def resolve_path(clean_name, legacy_name=None):
+    candidates = [
+        os.path.join(root_dir, "samples", clean_name),
+        os.path.join(root_dir, clean_name),
+        clean_name
+    ]
+    if legacy_name:
+        candidates.extend([
+            os.path.join(root_dir, "samples", legacy_name),
+            os.path.join(root_dir, legacy_name),
+            legacy_name
+        ])
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return os.path.join(root_dir, "samples", clean_name)
+
 def run_audit():
     print("=" * 70)
     print("🚀 STARTING DEEP AUDIT & END-TO-END VERIFICATION")
@@ -71,7 +88,8 @@ def run_audit():
     print("\n--- Phase 3: Real Image Benchmark Dataset Tests ---")
     benchmark_dataset = [
         {
-            "file": "WhatsApp Image 2026-10-22 at 4.55.31 PM.jpeg",
+            "clean_file": "sample1_beam_upsidedown.jpg",
+            "legacy_file": "WhatsApp Image 2026-10-22 at 4.55.31 PM.jpeg",
             "expected_code": "GJ/142/446/2026/11881/UP",
             "expected_state": "GJ",
             "expected_model": "446",
@@ -80,7 +98,8 @@ def run_audit():
             "expected_suffix": "UP"
         },
         {
-            "file": "WhatsApp Image 2026-10-22 at 4.55.31 PM (1).jpeg",
+            "clean_file": "sample2_bracket_2line.jpg",
+            "legacy_file": "WhatsApp Image 2026-10-22 at 4.55.31 PM (1).jpeg",
             "expected_code": "GJ/142/3674/2026/10652",
             "expected_state": "GJ",
             "expected_model": "3674",
@@ -89,7 +108,8 @@ def run_audit():
             "expected_suffix": ""
         },
         {
-            "file": "WhatsApp Image 2026-10-22 at 4.55.32 PM.jpeg",
+            "clean_file": "sample3_plate_2line.jpg",
+            "legacy_file": "WhatsApp Image 2026-10-22 at 4.55.32 PM.jpeg",
             "expected_code": "GJ/142/3674/2026/10568",
             "expected_state": "GJ",
             "expected_model": "3674",
@@ -98,7 +118,8 @@ def run_audit():
             "expected_suffix": ""
         },
         {
-            "file": "WhatsApp Image 2026-10-22 at 4.55.32 PM (1).jpeg",
+            "clean_file": "sample4_tube_vertical.jpg",
+            "legacy_file": "WhatsApp Image 2026-10-22 at 4.55.32 PM (1).jpeg",
             "expected_code": "GJ/142/445/2026/43889",
             "expected_state": "GJ",
             "expected_model": "445",
@@ -109,7 +130,7 @@ def run_audit():
     ]
 
     for item in benchmark_dataset:
-        filepath = item["file"]
+        filepath = resolve_path(item["clean_file"], item["legacy_file"])
         if not os.path.exists(filepath):
             record(f"File exists {filepath}", False, "File missing on disk")
             continue
@@ -122,20 +143,21 @@ def run_audit():
         res_mobile = client.post('/ocr?include_images=false', data={'file': (io.BytesIO(bytes_data), 'part.jpg')})
         duration_ms = round((time.time() - start_t) * 1000, 1)
         
-        record(f"POST /ocr mobile [{filepath}] HTTP 200", res_mobile.status_code == 200)
+        display_name = os.path.basename(filepath)
+        record(f"POST /ocr mobile [{display_name}] HTTP 200", res_mobile.status_code == 200)
         data = res_mobile.get_json() or {}
         code = data.get("final_code")
-        record(f"POST /ocr code accuracy [{filepath}]", code == item["expected_code"], f"Got: '{code}', Expected: '{item['expected_code']}' ({duration_ms}ms)")
+        record(f"POST /ocr code accuracy [{display_name}]", code == item["expected_code"], f"Got: '{code}', Expected: '{item['expected_code']}' ({duration_ms}ms)")
         
         # Verify parsed components
         parsed = data.get("parsed_info", {})
-        record(f"Parsed isValid [{filepath}]", parsed.get("is_valid") is True)
-        record(f"Parsed State [{filepath}]", parsed.get("state_code") == item["expected_state"])
-        record(f"Parsed Model [{filepath}]", parsed.get("model_code") == item["expected_model"])
-        record(f"Parsed Year [{filepath}]", parsed.get("year") == item["expected_year"])
-        record(f"Parsed Serial [{filepath}]", parsed.get("serial_no") == item["expected_serial"])
+        record(f"Parsed isValid [{display_name}]", parsed.get("is_valid") is True)
+        record(f"Parsed State [{display_name}]", parsed.get("state_code") == item["expected_state"])
+        record(f"Parsed Model [{display_name}]", parsed.get("model_code") == item["expected_model"])
+        record(f"Parsed Year [{display_name}]", parsed.get("year") == item["expected_year"])
+        record(f"Parsed Serial [{display_name}]", parsed.get("serial_no") == item["expected_serial"])
         if item["expected_suffix"]:
-            record(f"Parsed Suffix [{filepath}]", parsed.get("suffix") == item["expected_suffix"])
+            record(f"Parsed Suffix [{display_name}]", parsed.get("suffix") == item["expected_suffix"])
             
         # Verify base64 exclusion in mobile mode
         record(f"Mobile payload excludes cropped_binary_base64", "cropped_binary_base64" not in data)
@@ -144,14 +166,15 @@ def run_audit():
         # 3B: Test with include_images=true
         res_full = client.post('/ocr?include_images=true', data={'file': (io.BytesIO(bytes_data), 'part.jpg')})
         data_full = res_full.get_json() or {}
-        record(f"Full payload has cropped_binary_base64 [{filepath}]", bool(data_full.get("cropped_binary_base64")))
-        record(f"Full payload has digital_stamp_base64 [{filepath}]", bool(data_full.get("digital_stamp_base64")))
+        record(f"Full payload has cropped_binary_base64 [{display_name}]", bool(data_full.get("cropped_binary_base64")))
+        record(f"Full payload has digital_stamp_base64 [{display_name}]", bool(data_full.get("digital_stamp_base64")))
 
     # -------------------------------------------------------------
     # 4. Form Field Name Flexibility: 'image' vs 'file'
     # -------------------------------------------------------------
     print("\n--- Phase 4: Form Field Name Compatibility ---")
-    with open(benchmark_dataset[0]["file"], "rb") as f:
+    p0 = resolve_path(benchmark_dataset[0]["clean_file"], benchmark_dataset[0]["legacy_file"])
+    with open(p0, "rb") as f:
         b = f.read()
     res_field_image = client.post('/ocr', data={'image': (io.BytesIO(b), 'test.jpg')})
     record("Upload using field name 'image'", res_field_image.status_code == 200 and res_field_image.get_json().get("final_code") == benchmark_dataset[0]["expected_code"])
@@ -172,7 +195,7 @@ def run_audit():
     # 6. Reference Specification Sheet Mode
     # -------------------------------------------------------------
     print("\n--- Phase 6: Reference Catalog Sheet ---")
-    chart_file = "WhatsApp Image 2026-10-22 at 4.55.33 PM.jpeg"
+    chart_file = resolve_path("sample5_catalog_chart.jpg", "WhatsApp Image 2026-10-22 at 4.55.33 PM.jpeg")
     if os.path.exists(chart_file):
         with open(chart_file, "rb") as f:
             b_chart = f.read()
