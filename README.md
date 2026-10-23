@@ -1,15 +1,28 @@
 # Laser Cut Metal Stencil OCR & Implement Code Scanner
 
-An industrial vision OCR application built with **Streamlit** and **RapidOCR (PaddleOCR ONNX)** designed for detecting, deskewing, binarizing, and recognizing laser-cut stencil codes on sheet metal parts, tubes, brackets, and agricultural implements.
+An industrial vision OCR application and web service built for detecting, deskewing, binarizing, and recognizing laser-cut stencil codes on sheet metal parts, tubes, brackets, and agricultural implements.
+
+🌐 **Live Vercel Production Web App**: [https://raj-ai-ocr.vercel.app](https://raj-ai-ocr.vercel.app)  
+📦 **GitHub Repository**: [https://github.com/lostxmusafir/raj-ai-ocr-.git](https://github.com/lostxmusafir/raj-ai-ocr-.git)
+
+---
+
+## Deployments & Quick Access
+
+| Interface | URL / Method | Description |
+|---|---|---|
+| **Vercel Web App (Live)** | [https://raj-ai-ocr.vercel.app](https://raj-ai-ocr.vercel.app) | Responsive dark industrial web UI with camera scan, upload, sample testing, and high-contrast white-on-black cards. |
+| **Vercel Cloud API** | `POST https://raj-ai-ocr.vercel.app/api/ocr` | Serverless Python REST API for laser-cut stencil code identification. |
+| **Local Streamlit App** | Double-click `run_app.bat` or `http://localhost:8501` | Full interactive desktop dashboard with live camera input and deep analytics. |
 
 ---
 
 ## Features
 
 - **Multi-Source Input**:
-  - 📷 **Live Camera Scanner**: Scan directly via webcam or smartphone camera with `st.camera_input` (includes automatic EXIF orientation normalization).
+  - 📷 **Live Camera Scanner**: Scan directly via webcam or smartphone camera (supports mobile camera switching & automatic EXIF orientation normalization).
   - 📁 **File Upload**: Upload high-resolution images (PNG, JPG, JPEG, WEBP).
-  - 🖼️ **Sample Gallery**: Quick 1-click testing with all sample part images from the factory.
+  - 🖼️ **Sample Gallery**: Quick 1-click testing with all 5 sample factory parts.
 - **Robust Metal Stencil Recognition**:
   - Handles arbitrary orientations: horizontal, vertical, 180° upside-down, and skewed parts.
   - Handles both **1-line** and **2-line** laser stamped layouts regardless of line detection order.
@@ -32,36 +45,73 @@ An industrial vision OCR application built with **Streamlit** and **RapidOCR (Pa
 
 ---
 
-## Quick Start
+## API Endpoints (Vercel Serverless)
+
+### 1. Health Check
+```bash
+curl https://raj-ai-ocr.vercel.app/api/health
+```
+
+### 2. Recognize Stencil Code from Image
+```bash
+curl -X POST -F "file=@part_photo.jpg" https://raj-ai-ocr.vercel.app/api/ocr
+```
+
+Response JSON:
+```json
+{
+  "status": "success",
+  "final_code": "GJ/142/445/2026/43889",
+  "parsed_info": {
+    "is_valid": true,
+    "state_code": "GJ",
+    "state_name": "Gujarat",
+    "mfr_code": "142",
+    "model_code": "445",
+    "year": "2026",
+    "serial_no": "43889",
+    "model_info": {
+      "name": "REG V1 / SEMI MSS",
+      "series": "Regular / Semi Series",
+      "sizes": ["5ft", "5.5ft", "1.55m"]
+    }
+  },
+  "best_angle": 90,
+  "elapsed_ms": 1180.5,
+  "cropped_binary_base64": "data:image/png;base64,...",
+  "digital_stamp_base64": "data:image/png;base64,..."
+}
+```
+
+---
+
+## Local Development & Testing
 
 ### 1. Launch the Streamlit App
-Double-click `run_app.bat` or run the following command in PowerShell:
-
+Double-click `run_app.bat` or run:
 ```powershell
 & "$env:LOCALAPPDATA\Python\bin\python.exe" -m streamlit run app.py
 ```
-
-The application will open in your browser at `http://localhost:8501`.
+Open [http://localhost:8501](http://localhost:8501) in your browser.
 
 ### 2. Run Tests
 Verify OCR accuracy across all sample images:
-
 ```powershell
 & "$env:LOCALAPPDATA\Python\bin\python.exe" test_ocr.py
 ```
 
-Run the automated pytest unit and edge-case suite:
-
+Run automated pytest unit tests:
 ```powershell
 & "$env:LOCALAPPDATA\Python\bin\python.exe" -m pytest test_edge_cases.py -v
 ```
 
 ---
 
-## File Structure
+## Pushing to GitHub
 
-- `app.py`: Streamlit web interface and user interaction logic with high-contrast display cards.
-- `ocr_engine.py`: OCR pipeline, rotation handling, RGB normalization, deskewing, binarization (White on Black), digital badge generation, and robust code parser.
-- `test_ocr.py`: Verification script across all 5 sample images in the folder.
-- `test_edge_cases.py`: Pytest suite covering token cleaning, 1-line/2-line normalization, reversed line order, noise resilience, quadrilateral vertex sorting, digital badge generation, and corrupt inputs.
-- `run_app.bat`: Windows batch script with automatic local Python detection to launch the app with one click.
+All code is staged and committed to the `main` branch. To push to GitHub:
+- **Option 1**: Double-click `push_to_github.bat` in the folder.
+- **Option 2**: In your terminal, run:
+  ```powershell
+  git push -u origin main
+  ```
