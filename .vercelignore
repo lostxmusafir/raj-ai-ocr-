@@ -1,9 +1,0 @@
-.git
-.pytest_cache
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-test_*.py
-run_app.bat
-requirements-streamlit.txt

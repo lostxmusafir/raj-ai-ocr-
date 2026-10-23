@@ -15,15 +15,7 @@ env/
 venv/
 ENV/
 
-# Streamlit
-.streamlit/secrets.toml
-
-# Vercel
-.vercel/
-
 # Operating System files
 .DS_Store
 Thumbs.db
 desktop.ini
-
-.vercel

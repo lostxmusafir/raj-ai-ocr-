@@ -1,60 +1,60 @@
-# Laser Cut Metal Stencil OCR & Implement Code Scanner
+# Laser Cut Metal Stencil OCR - Dedicated Backend REST API
 
-An industrial vision OCR application and web service built for detecting, deskewing, binarizing, and recognizing laser-cut stencil codes on sheet metal parts, tubes, brackets, and agricultural implements.
+An industrial vision OCR REST API service and Android SDK built for detecting, deskewing, binarizing, and recognizing laser-cut stencil codes on sheet metal parts, tubes, brackets, and agricultural implements.
 
-🌐 **Live Vercel Production Web App**: [https://raj-ai-ocr.vercel.app](https://raj-ai-ocr.vercel.app)  
 📦 **GitHub Repository**: [https://github.com/lostxmusafir/raj-ai-ocr-.git](https://github.com/lostxmusafir/raj-ai-ocr-.git)
 
 ---
 
-## Deployments & Quick Access
+## Architecture Overview
 
-| Interface | URL / Method | Description |
-|---|---|---|
-| **Vercel Web App (Live)** | [https://raj-ai-ocr.vercel.app](https://raj-ai-ocr.vercel.app) | Responsive dark industrial web UI with camera scan, upload, sample testing, and high-contrast white-on-black cards. |
-| **Vercel Cloud API** | `POST https://raj-ai-ocr.vercel.app/api/ocr` | Serverless Python REST API for laser-cut stencil code identification. |
-| **Local Streamlit App** | Double-click `run_app.bat` or `http://localhost:8501` | Full interactive desktop dashboard with live camera input and deep analytics. |
+- **Standalone Python REST API** (`server.py`): High-performance CPU inference via ONNX Runtime and OpenCV, with bridge-healing heuristics.
+- **Native Android SDK Module** (`android/`): Ready-to-use Kotlin and Java client with automatic phone camera photo downscaling and Retrofit networking.
+- **1-Click Local Server Launcher** (`run_api.bat`): Runs the API server on port 5000.
 
 ---
 
 ## Features
 
-- **Multi-Source Input**:
-  - 📷 **Live Camera Scanner**: Scan directly via webcam or smartphone camera (supports mobile camera switching & automatic EXIF orientation normalization).
-  - 📁 **File Upload**: Upload high-resolution images (PNG, JPG, JPEG, WEBP).
-  - 🖼️ **Sample Gallery**: Quick 1-click testing with all 5 sample factory parts.
 - **Robust Metal Stencil Recognition**:
   - Handles arbitrary orientations: horizontal, vertical, 180° upside-down, and skewed parts.
   - Handles both **1-line** and **2-line** laser stamped layouts regardless of line detection order.
   - Robust against noise text lines, logos, and metal surface scratches.
   - Bridges stencil gaps and splits (e.g. `CJ` → `GJ`, misread slashes `1` / `|` → `/`, letter `O` in year `2O26` → `2026`).
   - Supports all Indian State prefixes (`GJ`, `MH`, `MP`, `RJ`, `PB`, `HR`, `UP`, `KA`, `TN`, `AP`, `TS`, `DL`, etc.).
-- **High-Contrast White-on-Black Visualization ("number white me print or background in black")**:
-  - **Identified number printed in glowing White text on pure Black background** (`#000000`).
-  - 📋 **1-Click Copy**: Built-in copy-to-clipboard code block for fast data entry.
-  - 🔬 **Real Cutout Binarization**: Perspective-deskewed physical cutout patch rendered in high-contrast White text on pure Black.
-  - 🏷️ **Digital Label Badge**: Synthetic high-resolution industrial label badge (White on Black) ready for immediate printing or inspection logging.
 - **Implement Code Validation & Catalog Recognition**:
   - Validates according to the Indian Centralized Implement Code standard:
     `[State]/[Mfr Code]/[Model Code]/[Year]/[Serial No]/[Suffix]`
   - Semantic breakdown into State (e.g., Gujarat `GJ`), Manufacturer (`142`), Model Series (`444`, `445`, `446`, `447`, `3528`, `3674`), Year, and Serial unit.
-  - **Document / Reference Chart Mode**: Intelligently identifies reference catalog documents (like the "List of Codes for Laser Marking"), extracting codes and displaying a searchable table of models, series categories, and sizes.
-- **Export & History**:
-  - Export detected code (TXT), structured JSON report, high-contrast binary mask (PNG), and digital label badge (PNG).
-  - Interactive scan history log with timing metrics.
+- **High-Performance Lightweight API**:
+  - Returns structured JSON in ~1 second.
+  - Query parameter `?include_images=false` for ultra-compact ~500 byte responses on mobile networks.
 
 ---
 
-## API Endpoints (Vercel Serverless)
+## Running the API Server
+
+### 1. Launch via Batch File (Windows)
+Double-click `run_api.bat` in the root folder.
+
+### 2. Launch via Command Line
+```powershell
+python server.py
+```
+The server will listen on `http://0.0.0.0:5000`.
+
+---
+
+## API Endpoints
 
 ### 1. Health Check
 ```bash
-curl https://raj-ai-ocr.vercel.app/api/health
+curl http://localhost:5000/health
 ```
 
 ### 2. Recognize Stencil Code from Image
 ```bash
-curl -X POST -F "file=@part_photo.jpg" https://raj-ai-ocr.vercel.app/api/ocr
+curl -X POST -F "file=@part_photo.jpg" "http://localhost:5000/ocr?include_images=false"
 ```
 
 Response JSON:
@@ -76,42 +76,33 @@ Response JSON:
       "sizes": ["5ft", "5.5ft", "1.55m"]
     }
   },
-  "best_angle": 90,
-  "elapsed_ms": 1180.5,
-  "cropped_binary_base64": "data:image/png;base64,...",
-  "digital_stamp_base64": "data:image/png;base64,..."
+  "best_angle": 0,
+  "elapsed_ms": 1150.2
 }
 ```
 
 ---
 
-## Local Development & Testing
+## Android Mobile SDK Module (`android/`)
 
-### 1. Launch the Streamlit App
-Double-click `run_app.bat` or run:
-```powershell
-& "$env:LOCALAPPDATA\Python\bin\python.exe" -m streamlit run app.py
-```
-Open [http://localhost:8501](http://localhost:8501) in your browser.
+The repository includes a ready-to-use Android library module with Kotlin & Java clients:
 
-### 2. Run Tests
-Verify OCR accuracy across all sample images:
-```powershell
-& "$env:LOCALAPPDATA\Python\bin\python.exe" test_ocr.py
-```
+- `OcrSdk.kt` (Kotlin coroutines client with camera compression)
+- `OcrJavaClient.java` (Java callback client)
+- `OcrModels.kt` (Gson data classes)
+- `build.gradle.kts` & `AndroidManifest.xml`
 
-Run automated pytest unit tests:
-```powershell
-& "$env:LOCALAPPDATA\Python\bin\python.exe" -m pytest test_edge_cases.py -v
-```
+See [ANDROID_KOTLIN_JAVA_GUIDE.md](ANDROID_KOTLIN_JAVA_GUIDE.md) for full Android integration instructions.
 
 ---
 
-## Pushing to GitHub
+## Running Verification Tests
 
-All code is staged and committed to the `main` branch. To push to GitHub:
-- **Option 1**: Double-click `push_to_github.bat` in the folder.
-- **Option 2**: In your terminal, run:
-  ```powershell
-  git push -u origin main
-  ```
+Run the full 64-point test suite:
+```powershell
+python verify_all.py
+```
+Run PyTest edge-case tests:
+```powershell
+python -m pytest test_edge_cases.py -v
+```

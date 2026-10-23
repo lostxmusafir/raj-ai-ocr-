@@ -1,7 +1,7 @@
 # Android Mobile Developer Integration Guide (Kotlin & Java)
 
 ## 📌 API Details
-- **Endpoint**: `https://raj-ai-ocr.vercel.app/api/ocr`
+- **Endpoint**: `http://<YOUR_SERVER_IP>:5000/ocr` (or `http://10.0.2.2:5000/ocr` for Android Emulator)
 - **Method**: `POST`
 - **Content-Type**: `multipart/form-data`
 - **Form Field**: `file` (File format: JPG, JPEG, PNG, WEBP)
@@ -98,7 +98,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "https://raj-ai-ocr.vercel.app/"
+    // Use your backend server IP or 10.0.2.2:5000 for Android emulator
+    private const val BASE_URL = "http://10.0.2.2:5000/"
 
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -291,7 +292,8 @@ import okhttp3.Response;
 
 public class OcrUploader {
 
-    private static final String API_URL = "https://raj-ai-ocr.vercel.app/api/ocr?include_images=false";
+    // Replace with your server IP (e.g. 10.0.2.2:5000 for emulator or 192.168.1.X:5000 for local network)
+    private static final String API_URL = "http://10.0.2.2:5000/ocr?include_images=false";
     private final OkHttpClient client;
     private final Gson gson;
 

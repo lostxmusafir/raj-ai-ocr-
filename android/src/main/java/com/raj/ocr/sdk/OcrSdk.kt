@@ -20,8 +20,9 @@ import java.io.InputStream
 object OcrSdk {
 
     /**
-     * Configure custom backend URL if running locally.
-     * Defaults to: https://raj-ai-ocr.vercel.app/
+     * Configure backend server URL.
+     * Default: http://10.0.2.2:5000/ (Android Emulator to Host PC)
+     * For real phone on local WiFi, use: http://<YOUR_PC_IP>:5000/
      */
     fun setServerUrl(url: String) {
         RetrofitClient.setBaseUrl(url)

@@ -11,7 +11,8 @@ import java.util.concurrent.TimeUnit
  */
 object RetrofitClient {
 
-    const val DEFAULT_BASE_URL = "https://raj-ai-ocr.vercel.app/"
+    // Default URL: Android emulator localhost (10.0.2.2:5000) or update via OcrSdk.setServerUrl()
+    const val DEFAULT_BASE_URL = "http://10.0.2.2:5000/"
 
     private var currentBaseUrl: String = DEFAULT_BASE_URL
     private var cachedService: OcrApiService? = null
