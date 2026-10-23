@@ -1,7 +1,3 @@
-"""
-Laser Cut Metal Stencil OCR - Dedicated Backend API Server
-Standalone REST API server for Mobile (Android Kotlin/Java), iOS, and Web clients.
-"""
 import os
 import sys
 import base64
@@ -12,7 +8,18 @@ import cv2
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-from ocr_engine import StencilOCREngine, IMPLEMENT_CATALOG, STATE_CODES
+# Add root directory to sys.path so ocr_engine can be imported
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+try:
+    from ocr_engine import StencilOCREngine, IMPLEMENT_CATALOG, STATE_CODES
+except ImportError:
+    from .ocr_engine import StencilOCREngine, IMPLEMENT_CATALOG, STATE_CODES
 
 app = Flask(__name__)
 CORS(app)
@@ -36,26 +43,24 @@ def mat_to_base64_png(mat):
 
 @app.route('/', methods=['GET'])
 @app.route('/api', methods=['GET'])
-@app.route('/health', methods=['GET'])
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({
         "status": "healthy",
-        "service": "Laser Cut Metal Stencil OCR Backend API",
+        "service": "Laser Cut Metal Stencil OCR API",
         "version": "1.0.0",
+        "supported_models": list(IMPLEMENT_CATALOG.keys()),
         "endpoints": {
-            "POST /ocr": "Upload sheet metal image (multipart/form-data 'file' or JSON base64) to extract code",
-            "POST /api/ocr": "Alias for /ocr",
-            "GET /catalog": "Get list of supported implement models & Indian state codes",
-            "GET /health": "Health check"
+            "POST /api/ocr": "Upload sheet metal image (multipart/form-data with 'file' or 'image' field, or JSON base64)",
+            "GET /api/catalog": "Get implement catalog models and Indian state code mapping",
+            "GET /api/health": "Health check and service status"
         },
         "query_parameters": {
-            "include_images": "boolean (default: false for mobile) - whether to include base64 cutouts",
-            "auto_rotate": "boolean (default: true) - tests 0, 90, 180, 270 degree rotations"
+            "auto_rotate": "boolean (default: true) - tests 0, 90, 180, 270 degree rotations",
+            "include_images": "boolean (default: true) - include base64 visual cutouts and digital stamp"
         }
     })
 
-@app.route('/catalog', methods=['GET'])
 @app.route('/api/catalog', methods=['GET'])
 def catalog():
     return jsonify({
@@ -64,7 +69,6 @@ def catalog():
         "states": STATE_CODES
     })
 
-@app.route('/ocr', methods=['POST'])
 @app.route('/api/ocr', methods=['POST'])
 def process_ocr():
     start_time = time.time()
@@ -97,13 +101,13 @@ def process_ocr():
     if img_bgr is None:
         return jsonify({
             "status": "error",
-            "message": "No valid image provided. Please upload an image file (multipart key 'file' or 'image') or provide base64 in JSON."
+            "message": "No valid image provided. Please upload an image file (field 'file' or 'image') or provide a base64 string in JSON."
         }), 400
 
     try:
         engine = get_engine()
         auto_rotate = request.args.get('auto_rotate', 'true').lower() in ('true', '1', 'yes')
-        include_images = request.args.get('include_images', 'false').lower() in ('true', '1', 'yes')
+        include_images = request.args.get('include_images', 'true').lower() in ('true', '1', 'yes')
 
         if request.is_json:
             data = request.get_json() or {}
@@ -124,7 +128,7 @@ def process_ocr():
             "raw_detections": result.get("raw_detections", [])
         }
 
-        # Include base64 images only when explicitly requested
+        # Include base64 images if requested
         if include_images:
             cropped_bin_b64 = mat_to_base64_png(result.get("cropped_binary"))
             digital_stamp_b64 = mat_to_base64_png(result.get("digital_stamp"))
@@ -145,13 +149,8 @@ def process_ocr():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print("=" * 65)
-    print(" ⚡ LASER CUT METAL STENCIL OCR - BACKEND API SERVER")
-    print("=" * 65)
-    print(f" [OK] Server running on:  http://0.0.0.0:{port}")
-    print(f" [OK] Health Check:       GET  http://localhost:{port}/health")
-    print(f" [OK] OCR Endpoint:         POST http://localhost:{port}/ocr")
-    print(f" [OK] Model Catalog:      GET  http://localhost:{port}/catalog")
-    print("=" * 65)
-    print(" Ready to receive image uploads from Mobile / Kotlin / Java clients.")
+    print(f"Starting Laser Stencil OCR API Server on port {port}...")
+    print(f"Access API at: http://localhost:{port}/api")
+    print(f"Health Check: http://localhost:{port}/api/health")
+    print(f"OCR Endpoint: POST http://localhost:{port}/api/ocr")
     app.run(host='0.0.0.0', port=port, debug=False)

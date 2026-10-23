@@ -1,18 +1,15 @@
-# Laser Cut Metal Stencil OCR - Dedicated Backend API Guide
+# Laser Cut Metal Stencil OCR - Developer API Guide
 
-This standalone REST API detects, deskews, binarizes, and recognizes laser-cut metal stencil part codes and centralized agricultural implement codes from uploaded photos.
+This API detects, deskews, binarizes, and recognizes laser-cut metal stencil part codes and centralized agricultural implement codes from uploaded photos.
 
 ---
 
-## 🌐 Server Base URL
-
-The backend runs as a standalone Python REST API service:
+## 🌐 Base URLs
 
 | Environment | Base URL | Note |
 |---|---|---|
-| **Local Development** | `http://localhost:5000` | Start server via `run_api.bat` or `python server.py` |
-| **Android Emulator** | `http://10.0.2.2:5000` | Android emulator loopback to host PC |
-| **Local Network / Production** | `http://<YOUR_SERVER_IP>:5000` | Accessible to mobile phones on WiFi or cloud VPS |
+| **Live Cloud Production (Vercel)** | `https://raj-ai-ocr.vercel.app` | Hosted on Vercel Serverless (Ready to use immediately) |
+| **Local Development Server** | `http://localhost:5000` | Start locally by double-clicking `run_api.bat` |
 
 ---
 
@@ -20,21 +17,20 @@ The backend runs as a standalone Python REST API service:
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/ocr` | Upload photo (file or base64) to detect & recognize stencil code |
-| `POST` | `/api/ocr` | Alias for `/ocr` |
-| `GET` | `/health` | Health check, service status, and version |
-| `GET` | `/catalog` | Implement catalog dictionary & state mappings |
+| `POST` | `/api/ocr` | Upload photo (file or base64) to detect & recognize stencil code |
+| `GET` | `/api/health` | Health check, API version, and supported model lists |
+| `GET` | `/api/catalog` | Get centralized implement catalog dictionary & state mappings |
 
 ---
 
-## 🚀 1. Recognize Stencil Code (`POST /ocr`)
+## 🚀 1. Recognize Stencil Code (`POST /api/ocr`)
 
 ### Query Parameters
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `auto_rotate` | `boolean` | `true` | Automatically checks 0°, 90°, 180°, and 270° orientations to detect vertical or upside-down parts. |
-| `include_images` | `boolean` | `false` | Set to `false` for mobile to exclude base64 image strings from response for ultra-fast, lightweight responses (~500 bytes). |
+| `include_images` | `boolean` | `true` | Set to `false` to exclude base64 image strings from response for ultra-fast and lightweight responses (~500 bytes). |
 
 ---
 
@@ -45,13 +41,13 @@ Accepted field names: `file` or `image`.
 
 #### cURL Example:
 ```bash
-curl -X POST "http://localhost:5000/ocr" \
+curl -X POST "https://raj-ai-ocr.vercel.app/api/ocr" \
      -F "file=@part_photo.jpg"
 ```
 
-#### Lightweight Mobile Mode (No base64 images in response):
+#### Lightweight Mode (No base64 images in response):
 ```bash
-curl -X POST "http://localhost:5000/ocr?include_images=false" \
+curl -X POST "https://raj-ai-ocr.vercel.app/api/ocr?include_images=false" \
      -F "file=@part_photo.jpg"
 ```
 
@@ -71,7 +67,7 @@ Content-Type: application/json
 {
   "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ...",
   "auto_rotate": true,
-  "include_images": false
+  "include_images": true
 }
 ```
 
@@ -110,7 +106,10 @@ Content-Type: application/json
       "score": 0.94,
       "text": "GJ/142/446/2026/11881/UP"
     }
-  ]
+  ],
+  "cropped_binary_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+  "digital_stamp_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+  "annotated_image_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
 }
 ```
 
@@ -131,6 +130,8 @@ Content-Type: application/json
 | `parsed_info.suffix` | `string` | Optional orientation / inspection mark (e.g., `UP`). |
 | `best_angle` | `integer` | Rotation applied to detect text (`0`, `90`, `180`, `270`). |
 | `elapsed_ms` | `float` | Server processing time in milliseconds. |
+| `cropped_binary_base64` | `string` | **High-contrast cutout** showing extracted numbers in **Pure White text on Pure Black background**. |
+| `digital_stamp_base64` | `string` | Ready-to-print synthetic digital badge card (White on Black). |
 
 ---
 
@@ -141,7 +142,7 @@ Content-Type: application/json
 ```python
 import requests
 
-url = "http://localhost:5000/ocr?include_images=false"
+url = "https://raj-ai-ocr.vercel.app/api/ocr"
 
 # File upload
 with open("metal_part.jpg", "rb") as img_file:
@@ -169,7 +170,7 @@ async function scanPart(imagePath) {
     const form = new FormData();
     form.append('file', fs.createReadStream(imagePath));
 
-    const response = await fetch('http://localhost:5000/ocr?include_images=false', {
+    const response = await fetch('https://raj-ai-ocr.vercel.app/api/ocr', {
         method: 'POST',
         body: form
     });
@@ -185,7 +186,35 @@ scanPart('part_photo.jpg');
 
 ---
 
-### 3. Android (Kotlin with OkHttp)
+### 3. Frontend Web (Browser HTML & JavaScript)
+
+```html
+<input type="file" id="imageInput" accept="image/*">
+<button onclick="uploadImage()">Scan Number</button>
+<p id="resultDisplay" style="font-size: 24px; font-weight: bold; background: #000; color: #fff; padding: 12px;"></p>
+
+<script>
+async function uploadImage() {
+    const fileInput = document.getElementById('imageInput');
+    if (!fileInput.files.length) return alert('Select an image first!');
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    const res = await fetch('https://raj-ai-ocr.vercel.app/api/ocr', {
+        method: 'POST',
+        body: formData
+    });
+
+    const data = await res.json();
+    document.getElementById('resultDisplay').innerText = data.final_code || 'No code detected';
+}
+</script>
+```
+
+---
+
+### 4. Android (Java / Kotlin with OkHttp)
 
 ```kotlin
 val client = OkHttpClient()
@@ -197,7 +226,7 @@ val requestBody = MultipartBody.Builder()
     .build()
 
 val request = Request.Builder()
-    .url("http://10.0.2.2:5000/ocr?include_images=false")
+    .url("https://raj-ai-ocr.vercel.app/api/ocr")
     .post(requestBody)
     .build()
 
@@ -215,11 +244,36 @@ client.newCall(request).enqueue(object : Callback {
 
 ---
 
-## 🛠️ Running the API Server
+### 5. Flutter / Dart
 
-1. **Option 1**: Double-click `run_api.bat` in the project root directory.
-2. **Option 2**: Run in terminal:
-   ```bash
-   python server.py
-   ```
-3. Server will start on `http://0.0.0.0:5000`.
+```dart
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+Future<void> scanImage(File imageFile) async {
+  var request = http.MultipartRequest(
+    'POST',
+    Uri.parse('https://raj-ai-ocr.vercel.app/api/ocr'),
+  );
+  request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+  var streamedResponse = await request.send();
+  var response = await http.Response.fromStream(streamedResponse);
+
+  if (response.statusCode == 200) {
+    var data = jsonDecode(response.body);
+    print("Detected Code: ${data['final_code']}");
+  }
+}
+```
+
+---
+
+## 🛠️ Running API Locally
+
+To run the API on your local computer or on a local network server:
+1. Double-click `run_api.bat` in the project root directory.
+2. The server will start on `http://localhost:5000`.
+3. Other devices on the same local Wi-Fi / network can call it via:
+   `http://<YOUR_LOCAL_IP>:5000/api/ocr`

@@ -1,7 +1,7 @@
 @echo off
-title Laser Cut Metal Stencil OCR - Backend API Server
+title Laser Cut Metal Stencil OCR - REST API Server
 echo ============================================================
-echo Starting Pure Backend API Server...
+echo Starting Laser Cut Metal Stencil OCR API Server...
 echo ============================================================
 
 set "PYTHON_EXE="
@@ -35,5 +35,11 @@ if "%PYTHON_EXE%"=="" (
 )
 
 echo Using Python: %PYTHON_EXE%
-"%PYTHON_EXE%" server.py
+echo API Server running at: http://localhost:5000
+echo Endpoints:
+echo   - Health Check: GET  http://localhost:5000/api/health
+echo   - OCR Upload:   POST http://localhost:5000/api/ocr
+echo   - Catalog:      GET  http://localhost:5000/api/catalog
+echo ============================================================
+"%PYTHON_EXE%" api/index.py
 pause
